@@ -1,0 +1,25 @@
+From 68cce686b01692d94e71badd630044a546443ce6 Mon Sep 17 00:00:00 2001
+From: Register <458892+aieu@users.noreply.github.com>
+Date: Mon, 17 Sep 2001 00:00:00 +0800
+Subject: [PATCH] catdrive: increase voltage for sgmii
+
+Signed-off-by: Register <458892+aieu@users.noreply.github.com>
+---
+ arch/arm64/boot/dts/marvell/armada-3720-catdrive.dts | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/arch/arm64/boot/dts/marvell/armada-3720-catdrive.dts b/arch/arm64/boot/dts/marvell/armada-3720-catdrive.dts
+index 08e15aa4..b1a280b6 100644
+--- a/arch/arm64/boot/dts/marvell/armada-3720-catdrive.dts
++++ b/arch/arm64/boot/dts/marvell/armada-3720-catdrive.dts
+@@ -106,6 +106,7 @@
+ 	status = "okay";
+ 	phy0: ethernet-phy@0 {
+ 		reg = <0>;
++		marvell,reg-init = <0x01 0x1A 0x0 0x47>;
+ 	};
+ };
+ 
+-- 
+2.26.3
+

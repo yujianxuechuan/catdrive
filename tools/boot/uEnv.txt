@@ -1,3 +1,0 @@
-verbosity=7
-rootfstype=ext4
-extraargs=audit=0

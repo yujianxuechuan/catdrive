@@ -1,0 +1,26 @@
+From d2f24dacb63e611bd507b0d789f5dd6caf4d0edb Mon Sep 17 00:00:00 2001
+From: Register <458892+aieu@users.noreply.github.com>
+Date: Mon, 17 Sep 2001 00:00:00 +0800
+Subject: [PATCH] catdrive: phy 88e1512 leds
+
+Signed-off-by: Register <458892+aieu@users.noreply.github.com>
+---
+ drivers/net/phy/marvell.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/drivers/net/phy/marvell.c b/drivers/net/phy/marvell.c
+index 028a0406..e3099b10 100644
+--- a/drivers/net/phy/marvell.c
++++ b/drivers/net/phy/marvell.c
+@@ -132,7 +132,7 @@
+ 
+ #define MII_PHY_LED_CTRL	        16
+ #define MII_88E1121_PHY_LED_DEF		0x0030
+-#define MII_88E1510_PHY_LED_DEF		0x1177
++#define MII_88E1510_PHY_LED_DEF		0x1040
+ 
+ #define MII_M1011_PHY_STATUS		0x11
+ #define MII_M1011_PHY_STATUS_1000	0x8000
+-- 
+2.26.3
+

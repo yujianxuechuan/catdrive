@@ -1,0 +1,26 @@
+From 04174325922f248d510dfe22c65988c7e20ee66c Mon Sep 17 00:00:00 2001
+From: Register <458892+aieu@users.noreply.github.com>
+Date: Mon, 17 Sep 2001 00:00:00 +0800
+Subject: [PATCH] increasing_DMA_block_memory_allocation_to_2048
+
+Signed-off-by: Register <458892+aieu@users.noreply.github.com>
+---
+ arch/arm64/mm/dma-mapping.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/arch/arm64/mm/dma-mapping.c b/arch/arm64/mm/dma-mapping.c
+index 58470b15..aa0037a3 100644
+--- a/arch/arm64/mm/dma-mapping.c
++++ b/arch/arm64/mm/dma-mapping.c
+@@ -44,7 +44,7 @@ static pgprot_t __get_dma_pgprot(unsigned long attrs, pgprot_t prot,
+ 
+ static struct gen_pool *atomic_pool __ro_after_init;
+ 
+-#define DEFAULT_DMA_COHERENT_POOL_SIZE  SZ_256K
++#define DEFAULT_DMA_COHERENT_POOL_SIZE  SZ_2M
+ static size_t atomic_pool_size __initdata = DEFAULT_DMA_COHERENT_POOL_SIZE;
+ 
+ static int __init early_coherent_pool(char *p)
+-- 
+2.26.3
+

@@ -1,107 +1,69 @@
-KERNEL_BSP := https://github.com/vgist/catdrive/releases/download
-RELEASE_TAG = Kernel-4.14-2020-12-13
-DTB := armada-3720-catdrive.dtb
+SHELL = /bin/bash
+CUR_DIR := $(shell pwd)
+STAGE_DIR := $(CUR_DIR)/stage
+OUTPUT_DIR := $(CUR_DIR)/output
 
-DTB_URL := $(KERNEL_BSP)/$(RELEASE_TAG)/$(DTB)
-KERNEL_URL := $(KERNEL_BSP)/$(RELEASE_TAG)/Image
-KMOD_URL := $(KERNEL_BSP)/$(RELEASE_TAG)/modules.tar.xz
+TC := gcc-linaro-7.5.0-2019.12-x86_64_aarch64-linux-gnu
+TCURL := https://releases.linaro.org/components/toolchain/binaries/latest-7/aarch64-linux-gnu
+KTAGS := linux-4.14.76-armada-18.12
+KURL := https://github.com/MarvellEmbeddedProcessors/linux-marvell/archive/refs/heads
 
-TARGETS := debian archlinux alpine ubuntu
+KDIR := linux-marvell-$(KTAGS)
+KCFG := catdrive_defconfig
+KVER = $(shell make -s kernel_version)
 
-DL := dl
-DL_KERNEL := $(DL)/kernel/$(RELEASE_TAG)
-OUTPUT := output
+MAKE_ARCH := export PATH=$$PATH:$(CUR_DIR)/$(TC)/bin; make -C $(KDIR) CROSS_COMPILE=aarch64-linux-gnu- ARCH=arm64
+J=$(shell grep ^processor /proc/cpuinfo | wc -l)
 
-CURL := curl -O -L
-download = ( mkdir -p $(1) && cd $(1) ; $(CURL) $(2) )
+all: kernel modules
+	mkdir -p $(OUTPUT_DIR)
+	cp -f $(KDIR)/defconfig $(OUTPUT_DIR)/$(KCFG)
+	cp -f $(KDIR)/arch/arm64/boot/Image $(OUTPUT_DIR)
+	cp -f $(KDIR)/arch/arm64/boot/dts/marvell/armada-3720-catdrive.dtb $(OUTPUT_DIR)
+	tar --owner=root --group=root -cJf $(OUTPUT_DIR)/modules.tar.xz -C $(STAGE_DIR) lib
 
-help:
-	@echo "Usage: make build_[system1]=y build_[system2]=y build"
-	@echo "available system: $(TARGETS)"
-
-build: $(TARGETS)
-
-clean: $(TARGETS:%=%_clean)
-	rm -f $(RESCUE_ROOTFS)
-
-dl_kernel: $(DL_KERNEL)/$(DTB) $(DL_KERNEL)/Image $(DL_KERNEL)/modules.tar.xz
-
-$(DL_KERNEL)/$(DTB):
-	$(call download,$(DL_KERNEL),$(DTB_URL))
-
-$(DL_KERNEL)/Image:
-	$(call download,$(DL_KERNEL),$(KERNEL_URL))
-
-$(DL_KERNEL)/modules.tar.xz:
-	$(call download,$(DL_KERNEL),$(KMOD_URL))
-
-ALPINE_BRANCH := v3.13
-ALPINE_VERSION := 3.13.5
-ALPINE_PKG := alpine-minirootfs-$(ALPINE_VERSION)-aarch64.tar.gz
-RESCUE_ROOTFS := tools/rescue/rescue-alpine-catdrive-$(ALPINE_VERSION)-aarch64.tar.xz
-ALPINE_URL_BASE := http://dl-cdn.alpinelinux.org/alpine/$(ALPINE_BRANCH)/releases/aarch64
-
-alpine_dl: dl_kernel $(DL)/$(ALPINE_PKG)
-
-$(DL)/$(ALPINE_PKG):
-	$(call download,$(DL),$(ALPINE_URL_BASE)/$(ALPINE_PKG))
-
-alpine_clean:
-
-$(RESCUE_ROOTFS):
-	@[ ! -f $(RESCUE_ROOTFS) ] && make rescue
-
-rescue: alpine_dl
-	sudo BUILD_RESCUE=y ./build-alpine.sh release $(DL)/$(ALPINE_PKG) $(DL_KERNEL) -
-
-ifeq ($(build_alpine),y)
-alpine: alpine_dl $(RESCUE_ROOTFS)
-	sudo ./build-alpine.sh release $(DL)/$(ALPINE_PKG) $(DL_KERNEL) $(RESCUE_ROOTFS)
-else
-alpine:
+dl_toolchain:
+ifeq (,$(wildcard $(CUR_DIR)/$(TC).tar.xz))
+	curl -O -L $(TCURL)/$(TC).tar.xz
+	tar xf $(TC).tar.xz
+else ifeq (,$(wildcard $(CUR_DIR)/$(TC)))
+	tar xf $(TC).tar.xz
 endif
 
-
-ARCHLINUX_PKG := ArchLinuxARM-aarch64-latest.tar.gz
-ARCHLINUX_URL_BASE := http://os.archlinuxarm.org/os
-
-archlinux_dl: dl_kernel $(DL)/$(ARCHLINUX_PKG)
-
-$(DL)/$(ARCHLINUX_PKG):
-	$(call download,$(DL),$(ARCHLINUX_URL_BASE)/$(ARCHLINUX_PKG))
-
-archlinux_clean:
-	rm -f $(DL)/$(ARCHLINUX_PKG)
-
-ifeq ($(build_archlinux),y)
-archlinux: archlinux_dl $(RESCUE_ROOTFS)
-	sudo ./build-archlinux.sh release $(DL)/$(ARCHLINUX_PKG) $(DL_KERNEL) $(RESCUE_ROOTFS)
-else
-archlinux:
+dl_kernel:
+ifeq (,$(wildcard $(CUR_DIR)/$(KTAGS).tar.gz))
+	curl -O -L $(KURL)/$(KTAGS).tar.gz
+	tar xf $(KTAGS).tar.gz
+	rm -rf $(KDIR)/.git
+else ifeq (,$(wildcard $(CUR_DIR)/$(KDIR)))
+	tar xf $(KTAGS).tar.gz
+	rm -rf $(KDIR)/.git
 endif
 
-UBUNTU_PKG := ubuntu-base-20.04.2-base-arm64.tar.gz
-UBUNTU_URL_BASE := http://cdimage.ubuntu.com/ubuntu-base/releases/focal/release
+patch: dl_kernel dl_toolchain
+	find $(CUR_DIR)/patches -type f -print | sort | xargs -n 1 patch -d $(KDIR) -p1 -i
 
-ubuntu_dl: dl_kernel $(DL)/$(UBUNTU_PKG)
+kernel-config:
+	cp -f $(KCFG) $(KDIR)/arch/arm64/configs/
 
-$(DL)/$(UBUNTU_PKG):
-	$(call download,$(DL),$(UBUNTU_URL_BASE)/$(UBUNTU_PKG))
+kernel_version: kernel-config
+	$(MAKE_ARCH) kernelrelease
 
-ubuntu_clean:
+kernel: kernel-config
+	$(MAKE_ARCH) $(KCFG)
+	$(MAKE_ARCH) -j$(J) Image dtbs
+	$(MAKE_ARCH) savedefconfig
 
-ifeq ($(build_ubuntu),y)
-ubuntu: ubuntu_dl $(RESCUE_ROOTFS)
-	sudo ./build-ubuntu.sh release $(DL)/$(UBUNTU_PKG) $(DL_KERNEL) $(RESCUE_ROOTFS)
-else
-ubuntu:
-endif
+modules: kernel-config
+	rm -rf $(STAGE_DIR)
+	$(MAKE_ARCH) -j$(J) modules
+	$(MAKE_ARCH) INSTALL_MOD_STRIP=1 INSTALL_MOD_PATH=$(STAGE_DIR) modules_install
+	rm -f $(STAGE_DIR)/lib/modules/$(KVER)/build $(STAGE_DIR)/lib/modules/$(KVER)/source
 
-ifeq ($(build_debian),y)
-debian: dl_kernel $(RESCUE_ROOTFS)
-	sudo ./build-debian.sh release - $(DL_KERNEL) $(RESCUE_ROOTFS)
+kernel_clean:
+	$(MAKE_ARCH) clean
+	find $(CUR_DIR)/patches -type f -print | sort -r | xargs -n 1 patch -d $(KDIR) -p1 -R -i
 
-else
-debian:
-endif
-debian_clean:
+clean: kernel_clean
+	rm -rf $(STAGE_DIR)
+	rm -rf $(OUTPUT_DIR)/*

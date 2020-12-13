@@ -1,3 +1,11 @@
+!.gitkeep
+.DS_Store
+.initialized
+.restored
+.Spotlight-v100
 dl
+gcc-linaro-*
+linux-*
+stage
 tmp
 output

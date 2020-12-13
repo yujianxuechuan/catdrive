@@ -1,0 +1,159 @@
+From 10147a65b6eb548d992d6785e1b56f675e261740 Mon Sep 17 00:00:00 2001
+From: Register <458892+aieu@users.noreply.github.com>
+Date: Mon, 17 Sep 2001 00:00:00 +0800
+Subject: [PATCH] catdrive: init
+
+Signed-off-by: Register <458892+aieu@users.noreply.github.com>
+---
+ arch/arm64/boot/dts/marvell/Makefile          |   1 +
+ .../boot/dts/marvell/armada-3720-catdrive.dts | 116 ++++++++++++++++++
+ env.sh                                        |   2 +
+ 3 files changed, 119 insertions(+)
+ create mode 100644 arch/arm64/boot/dts/marvell/armada-3720-catdrive.dts
+ create mode 100644 env.sh
+
+diff --git a/arch/arm64/boot/dts/marvell/Makefile b/arch/arm64/boot/dts/marvell/Makefile
+index e529a261..b006af53 100644
+--- a/arch/arm64/boot/dts/marvell/Makefile
++++ b/arch/arm64/boot/dts/marvell/Makefile
+@@ -7,6 +7,7 @@ dtb-$(CONFIG_ARCH_BERLIN) += berlin4ct-stb.dtb
+ dtb-$(CONFIG_ARCH_MVEBU) += armada-3720-db.dtb
+ dtb-$(CONFIG_ARCH_MVEBU) += armada-3720-db-B.dtb
+ dtb-$(CONFIG_ARCH_MVEBU) += armada-3720-db-C.dtb
++dtb-$(CONFIG_ARCH_MVEBU) += armada-3720-catdrive.dtb
+ dtb-$(CONFIG_ARCH_MVEBU) += armada-3720-espressobin.dtb
+ dtb-$(CONFIG_ARCH_MVEBU) += armada-3720-espressobin-emmc.dtb
+ dtb-$(CONFIG_ARCH_MVEBU) += armada-7040-db.dtb
+diff --git a/arch/arm64/boot/dts/marvell/armada-3720-catdrive.dts b/arch/arm64/boot/dts/marvell/armada-3720-catdrive.dts
+new file mode 100644
+index 00000000..5c68128f
+--- /dev/null
++++ b/arch/arm64/boot/dts/marvell/armada-3720-catdrive.dts
+@@ -0,0 +1,116 @@
++// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
++
++/dts-v1/;
++
++#include <dt-bindings/gpio/gpio.h>
++#include "armada-372x.dtsi"
++
++/ {
++	model = "Marvell Armada 3720 Catdrive";
++	compatible = "marvell,catdrive", "marvell,armada3720", "marvell,armada3710";
++
++	chosen {
++		stdout-path = "serial0:115200n8";
++	};
++
++	memory@0 {
++		device_type = "memory";
++		reg = <0x00000000 0x00000000 0x00000000 0x20000000>;
++	};
++
++	vcc_sata_reg: regulator {
++		compatible = "regulator-fixed";
++		regulator-name = "vcc_sata";
++		regulator-min-microvolt = <5000000>;
++		regulator-max-microvolt = <5000000>;
++		regulator-boot-on;
++		regulator-always-on;
++		enable-active-high;
++		gpio = <&gpiosb 0 GPIO_ACTIVE_HIGH>;
++	};
++
++	gpio_fan {
++		compatible = "gpio-fan";
++		gpios = <&gpiosb 4 GPIO_ACTIVE_HIGH>;
++		gpio-fan,speed-map = <0    0
++					1000 1>;
++	};
++};
++
++&sata {
++	status = "okay";
++};
++
++&sdhci1 {
++	non-removable;
++	bus-width = <8>;
++	mmc-ddr-1_8v;
++	mmc-hs200-1_8v;
++	marvell,pad-type = "fixed-1-8v";
++	pinctrl-names = "default";
++	pinctrl-0 = <&mmc_pins>;
++	status = "okay";
++
++	#address-cells = <1>;
++	#size-cells = <0>;
++	mmccard: mmccard@0 {
++		compatible = "mmc-card";
++		reg = <0>;
++	};
++};
++
++&spi0 {
++	status = "okay";
++
++	m25p80@0 {
++		reg = <0>;
++		compatible = "jedec,spi-nor";
++		spi-max-frequency = <104000000>;
++		m25p,fast-read;
++		status = "okay";
++
++		partitions {
++			compatible = "fixed-partitions";
++			#address-cells = <1>;
++			#size-cells = <1>;
++
++			partition@0 {
++				label = "uboot";
++				reg = <0 0x1f0000>;
++			};
++
++			partition@1f0000 {
++				label = "ubootenv";
++				reg = <0x1f0000 0x10000>;
++			};
++
++			partition@200000 {
++				label = "reserve";
++				reg = <0x200000 0x600000>;
++			};
++		};
++	};
++};
++
++&uart0 {
++	pinctrl-names = "default";
++	pinctrl-0 = <&uart1_pins>;
++	status = "okay";
++};
++
++&usb2 {
++	status = "okay";
++};
++
++&mdio {
++	status = "okay";
++	phy0: ethernet-phy@0 {
++		reg = <0>;
++	};
++};
++
++&eth0 {
++	phy-mode = "sgmii";
++	phy = <&phy0>;
++	status = "okay";
++};
+diff --git a/env.sh b/env.sh
+new file mode 100644
+index 00000000..098b2d4b
+--- /dev/null
++++ b/env.sh
+@@ -0,0 +1,2 @@
++export ARCH=arm64
++export CROSS_COMPILE="aarch64-linux-gnu-"
+-- 
+2.26.3
+

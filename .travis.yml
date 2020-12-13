@@ -2,26 +2,25 @@ dist: bionic
 language: minimal
 branches:
   only:
-    - /^CatDrive-.*$/
+    - /^Kernel-.*$/
 addons:
   apt:
     packages:
-      - bsdtar
       - tree
-      - debootstrap
-      - jq
-      - binfmt-support
       - u-boot-tools
 script:
-  - make build_archlinux=y build_ubuntu=y build_debian=y build
-  - tree -hn output
+  - make patch && make all
 deploy:
   provider: releases
   skip_cleanup: true
   overwrite: true
   file_glob: true
-  file: output/release/*.xz
-  api_key: ${GITHUB_TOKEN}
+  file:
+    - output/catdrive_defconfig
+    - output/Image
+    - output/modules.tar.xz
+    - output/armada-3720-catdrive.dtb
+  api_key: $GITHUB_TOKEN
   on:
-    repo: vgist/catdrive
     tags: true
+    repo: vgist/catdrive
