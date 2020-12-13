@@ -1,0 +1,44 @@
+name: kernel-4.14
+
+on:
+  push:
+    tags:
+      - Kernel-4**
+
+jobs:
+  build:
+    runs-on: ubuntu-20.04
+    steps:
+
+    - name: Initialize environment
+      id: init
+      env:
+        DEBIAN_FRONTEND: noninteractive
+      run: |
+        sudo -E apt-get update -y
+        sudo -E apt-get install build-essential git tar u-boot-tools wget xz-utils -y
+        sudo -E apt-get clean
+
+    - name: Checkout
+      uses: actions/checkout@v2
+      with:
+        ref: kernel-4.14
+
+    - name: Compile kernel
+      run: |
+        make patch
+        make all
+
+    - name: Upload artifact
+      uses: actions/upload-artifact@v2
+      with:
+        path: output/*
+
+    - name: Create release
+      uses: softprops/action-gh-release@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        draft: false
+        prerelease: false
+        files: output/*

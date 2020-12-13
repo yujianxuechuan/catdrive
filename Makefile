@@ -1,16 +1,17 @@
-SHELL = /bin/bash
 CUR_DIR := $(shell pwd)
 STAGE_DIR := $(CUR_DIR)/stage
 OUTPUT_DIR := $(CUR_DIR)/output
 
 TC := gcc-linaro-7.5.0-2019.12-x86_64_aarch64-linux-gnu
-TCURL := https://releases.linaro.org/components/toolchain/binaries/latest-7/aarch64-linux-gnu
+TCURL := https://releases.linaro.org/components/toolchain/binaries/latest-7/aarch64-linux-gnu/$(TC).tar.xz
+
 KTAGS := linux-4.14.76-armada-18.12
-KURL := https://github.com/MarvellEmbeddedProcessors/linux-marvell/archive/refs/heads
+KURL := https://github.com/MarvellEmbeddedProcessors/linux-marvell/archive/refs/heads/$(KTAGS).tar.gz
 
 KDIR := linux-marvell-$(KTAGS)
 KCFG := catdrive_defconfig
 KVER = $(shell make -s kernel_version)
+KDTS := $(CUR_DIR)/$(KDIR)/arch/arm64/boot/dts/marvell/armada-3720-catdrive.dts
 
 MAKE_ARCH := export PATH=$$PATH:$(CUR_DIR)/$(TC)/bin; make -C $(KDIR) CROSS_COMPILE=aarch64-linux-gnu- ARCH=arm64
 J=$(shell grep ^processor /proc/cpuinfo | wc -l)
@@ -23,34 +24,36 @@ all: kernel modules
 	tar --owner=root --group=root -cJf $(OUTPUT_DIR)/modules.tar.xz -C $(STAGE_DIR) lib
 
 dl_toolchain:
-ifeq (,$(wildcard $(CUR_DIR)/$(TC).tar.xz))
-	curl -O -L $(TCURL)/$(TC).tar.xz
+ifeq (,$(wildcard $(TC).tar.xz))
+	curl -O -L $(TCURL)
 	tar xf $(TC).tar.xz
-else ifeq (,$(wildcard $(CUR_DIR)/$(TC)))
+else ifeq (,$(wildcard $(TC)))
 	tar xf $(TC).tar.xz
 endif
 
 dl_kernel:
-ifeq (,$(wildcard $(CUR_DIR)/$(KTAGS).tar.gz))
-	curl -O -L $(KURL)/$(KTAGS).tar.gz
+ifeq (,$(wildcard $(KTAGS).tar.gz))
+	curl -O -L $(KURL)
 	tar xf $(KTAGS).tar.gz
 	rm -rf $(KDIR)/.git
-else ifeq (,$(wildcard $(CUR_DIR)/$(KDIR)))
+else ifeq (,$(wildcard $(KDIR)))
 	tar xf $(KTAGS).tar.gz
 	rm -rf $(KDIR)/.git
 endif
 
-patch: dl_kernel dl_toolchain
-	find $(CUR_DIR)/patches -type f -print | sort | xargs -n 1 patch -d $(KDIR) -p1 -i
-
-kernel-config:
+kernel-config: patch
 	cp -f $(KCFG) $(KDIR)/arch/arm64/configs/
+	$(MAKE_ARCH) $(KCFG)
+
+patch: dl_kernel dl_toolchain
+ifeq (,$(wildcard $(KDTS)))
+	find $(CUR_DIR)/patches -type f -print | sort | xargs -n 1 patch -d $(KDIR) -p1 -i
+endif
 
 kernel_version: kernel-config
 	$(MAKE_ARCH) kernelrelease
 
 kernel: kernel-config
-	$(MAKE_ARCH) $(KCFG)
 	$(MAKE_ARCH) -j$(J) Image dtbs
 	$(MAKE_ARCH) savedefconfig
 
@@ -62,7 +65,9 @@ modules: kernel-config
 
 kernel_clean:
 	$(MAKE_ARCH) clean
+ifneq (,$(wildcard $(KDTS)))
 	find $(CUR_DIR)/patches -type f -print | sort -r | xargs -n 1 patch -d $(KDIR) -p1 -R -i
+endif
 
 clean: kernel_clean
 	rm -rf $(STAGE_DIR)

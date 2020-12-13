@@ -2,7 +2,7 @@ dist: bionic
 language: minimal
 branches:
   only:
-    - /^Kernel-.*$/
+    - /^Kernel-4.*$/
 addons:
   apt:
     packages:
