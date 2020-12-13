@@ -1,0 +1,422 @@
+From 6db0295faa618ccce1c6bf498f1208f5a2cbaf55 Mon Sep 17 00:00:00 2001
+From: Register <458892+aieu@users.noreply.github.com>
+Date: Mon, 17 Sep 2001 00:00:00 +0800
+Subject: [PATCH] uboot: add support for armada-3720-catdrive
+
+Signed-off-by: Register <458892+aieu@users.noreply.github.com>
+---
+ arch/arm/dts/Makefile                   |   1 +
+ arch/arm/dts/armada-3720-catdrive.dts   | 114 ++++++++++++++++++++++++
+ board/Marvell/mvebu_armada-37xx/board.c |  52 +++++++++++
+ configs/catdrive_defconfig              |  79 ++++++++++++++++
+ drivers/mtd/spi/spi_flash_ids.c         |   1 +
+ include/configs/mvebu_armada-common.h   |  60 +++++++------
+ 6 files changed, 278 insertions(+), 29 deletions(-)
+ create mode 100644 arch/arm/dts/armada-3720-catdrive.dts
+ create mode 100644 configs/catdrive_defconfig
+
+diff --git a/arch/arm/dts/Makefile b/arch/arm/dts/Makefile
+index d5d5796..e1621e1 100644
+--- a/arch/arm/dts/Makefile
++++ b/arch/arm/dts/Makefile
+@@ -98,6 +98,7 @@ dtb-$(CONFIG_ARCH_MVEBU) +=			\
+ 	armada-3720-ddr4-db-v3-C.dtb		\
+ 	armada-3720-ddr4-db-v1-A.dtb		\
+ 	armada-3720-ddr4-db-v1-B.dtb		\
++	armada-3720-catdrive.dtb		\
+ 	armada-3720-espressobin.dtb		\
+ 	armada-3720-espressobin-emmc.dtb	\
+ 	armada-375-db.dtb			\
+diff --git a/arch/arm/dts/armada-3720-catdrive.dts b/arch/arm/dts/armada-3720-catdrive.dts
+new file mode 100644
+index 0000000..a4a4de7
+--- /dev/null
++++ b/arch/arm/dts/armada-3720-catdrive.dts
+@@ -0,0 +1,114 @@
++// SPDX-License-Identifier: GPL-2.0+
++/dts-v1/;
++
++#include "armada-372x.dtsi"
++
++/ {
++	model = "Marvell Armada 3720 Catdrive";
++	compatible = "marvell,armada-3720-catdrive",
++		     "marvell,armada3720", "marvell,armada3710";
++
++	chosen {
++		stdout-path = "serial0:115200n8";
++	};
++
++	aliases {
++		ethernet0 = &eth0;
++		spi0 = &spi0;
++	};
++
++	memory {
++		device_type = "memory";
++		reg = <0x00000000 0x00000000 0x00000000 0x20000000>;
++	};
++
++	soc {
++		internal-regs {
++			mdio@32004 {
++				#address-cells = <1>;
++				#size-cells = <0>;
++				reg = <0x32004 0x04>;
++				ethphy0: ethernet-phy@0 {
++					reg = <0>;
++				};
++			};
++		};
++	};
++};
++
++&eth0 {
++	status = "okay";
++	phy-mode = "sgmii";
++	phy = <&ethphy0>;
++	pinctrl-names = "default";
++	pinctrl-0 = <&ptp_pins &smi_pins>;
++};
++
++&pinctrl_sb {
++	ptp_pins: ptp-pins {
++		groups = "ptp";
++		function = "gpio";
++	};
++};
++
++&comphy {
++	phy0 {
++		phy-type = <COMPHY_TYPE_UNCONNECTED>;
++		phy-speed = <COMPHY_SPEED_INVALID>;
++	};
++
++	phy1 {
++		phy-type = <COMPHY_TYPE_SGMII0>;
++		phy-speed = <COMPHY_SPEED_1_25G>;
++	};
++
++	phy2 {
++		phy-type = <COMPHY_TYPE_SATA0>;
++		phy-speed = <COMPHY_SPEED_6G>;
++		phy-invert = <COMPHY_POLARITY_TXD_INVERT>;
++	};
++};
++
++&sata {
++	status = "okay";
++};
++
++&sdhci1 {
++	non-removable;
++	bus-width = <8>;
++	mmc-ddr-1_8v;
++	mmc-hs200-1_8v;
++	marvell,pad-type = "fixed-1-8v";
++	pinctrl-names = "default";
++	pinctrl-0 = <&mmc_pins>;
++	status = "okay";
++
++	#address-cells = <1>;
++	#size-cells = <0>;
++	mmccard: mmccard@0 {
++		compatible = "mmc-card";
++		reg = <0>;
++	};
++};
++
++&spi0 {
++	status = "okay";
++
++	spi-flash@0 {
++		#address-cells = <1>;
++		#size-cells = <1>;
++		compatible = "spi-flash";
++		reg = <0>;
++		spi-max-frequency = <104000000>;
++	};
++};
++
++&uart0 {
++	pinctrl-names = "default";
++	pinctrl-0 = <&uart1_pins>;
++	status = "okay";
++};
++
++&usb2 {
++	status = "okay";
++};
+diff --git a/board/Marvell/mvebu_armada-37xx/board.c b/board/Marvell/mvebu_armada-37xx/board.c
+index 24ab3c0..55ce0e7 100644
+--- a/board/Marvell/mvebu_armada-37xx/board.c
++++ b/board/Marvell/mvebu_armada-37xx/board.c
+@@ -12,6 +12,7 @@
+ #include <asm/arch/cpu.h>
+ #include <asm/arch/soc.h>
+ #include <power/regulator.h>
++#include <asm-generic/gpio.h>
+ #ifdef CONFIG_BOARD_CONFIG_EEPROM
+ #include <mvebu/cfg_eeprom.h>
+ #endif
+@@ -124,6 +125,53 @@ static int board_comphy_usb3_sata_mux(enum COMPHY_LANE2_MUXING comphy_mux)
+ 	return 0;
+ }
+ 
++#define PHY_RESET	"GPIO221"
++static int phy_hw_reset(void)
++{
++	unsigned int gpio;
++	int ret;
++
++	if (!of_machine_is_compatible("marvell,armada-3720-catdrive"))
++		return 0;
++
++	ret = gpio_lookup_name(PHY_RESET, NULL, NULL, &gpio);
++	if (ret) {
++		printf("GPIO: '%s' not found\n", PHY_RESET);
++	} else {
++		gpio_free(gpio);
++		gpio_request(gpio, "phy_reset");
++		gpio_direction_output(gpio, 1);
++		mdelay(20);
++		gpio_set_value(gpio, 0);
++		mdelay(50);
++		gpio_set_value(gpio, 1);
++	}
++
++	return 0;
++}
++
++#define SATA_PWR	"GPIO20"
++static int enable_sata_power(void)
++{
++	unsigned int gpio;
++	int ret;
++	if (!of_machine_is_compatible("marvell,armada-3720-catdrive"))
++		return 0;
++
++	ret = gpio_lookup_name(SATA_PWR, NULL, NULL, &gpio);
++	if (ret) {
++		printf("GPIO: '%s' not found\n", SATA_PWR);
++	} else {
++		gpio_free(gpio);
++		gpio_request(gpio, "sata_pwr");
++		gpio_direction_output(gpio, 1);
++		mdelay(20);
++		gpio_set_value(gpio, 1);
++	}
++
++	return 0;
++}
++
+ int board_early_init_f(void)
+ {
+ #ifdef CONFIG_BOARD_CONFIG_EEPROM
+@@ -150,6 +198,8 @@ int board_ahci_enable(void)
+ 	int ret;
+ 	u8 buf[8];
+ 
++	enable_sata_power();
++
+ 	/* Only DB requres this configuration */
+ 	if (!of_machine_is_compatible("marvell,armada-3720-db"))
+ 		return 0;
+@@ -281,6 +331,8 @@ static int mii_multi_chip_mode_write(struct mii_dev *bus, int dev_smi_addr,
+ /* Bring-up board-specific network stuff */
+ int board_network_enable(struct mii_dev *bus)
+ {
++	phy_hw_reset();
++
+ 	if (!of_machine_is_compatible("marvell,armada-3720-espressobin"))
+ 		return 0;
+ 
+diff --git a/configs/catdrive_defconfig b/configs/catdrive_defconfig
+new file mode 100644
+index 0000000..52cc358
+--- /dev/null
++++ b/configs/catdrive_defconfig
+@@ -0,0 +1,79 @@
++CONFIG_ARM=y
++CONFIG_ARCH_MVEBU=y
++CONFIG_SYS_TEXT_BASE=0x00000000
++CONFIG_SYS_MALLOC_F_LEN=0x2000
++CONFIG_TARGET_MVEBU_ARMADA_37XX=y
++CONFIG_DEBUG_UART=y
++CONFIG_AHCI=y
++CONFIG_DISTRO_DEFAULTS=y
++# CONFIG_SYS_MALLOC_CLEAR_ON_INIT is not set
++# CONFIG_USE_BOOTCOMMAND is not set
++CONFIG_SYS_CONSOLE_ENV_OVERWRITE=y
++CONFIG_SYS_CONSOLE_INFO_QUIET=y
++CONFIG_ARCH_EARLY_INIT_R=y
++CONFIG_BOARD_EARLY_INIT_F=y
++CONFIG_SYS_PROMPT="Marvell>> "
++# CONFIG_CMD_FLASH is not set
++CONFIG_CMD_GPIO=y
++CONFIG_CMD_I2C=y
++CONFIG_CMD_MMC=y
++CONFIG_CMD_PCI=y
++CONFIG_CMD_SF=y
++CONFIG_CMD_SPI=y
++CONFIG_CMD_USB=y
++# CONFIG_CMD_SETEXPR is not set
++CONFIG_CMD_CACHE=y
++CONFIG_CMD_TIME=y
++CONFIG_CMD_MVEBU_BUBT=y
++CONFIG_CMD_REGULATOR=y
++CONFIG_CMD_EXT4_WRITE=y
++CONFIG_MAC_PARTITION=y
++CONFIG_ENV_IS_IN_SPI_FLASH=y
++CONFIG_SCSI_AHCI=y
++CONFIG_AHCI_MVEBU=y
++CONFIG_BLOCK_CACHE=y
++CONFIG_DM_GPIO=y
++CONFIG_DM_I2C=y
++CONFIG_MISC=y
++CONFIG_DM_MMC=y
++CONFIG_MMC_HS200_SUPPORT=y
++CONFIG_MMC_SDHCI=y
++CONFIG_MMC_SDHCI_SDMA=y
++CONFIG_MMC_SDHCI_XENON=y
++CONFIG_SPI_FLASH=y
++CONFIG_SPI_FLASH_GIGADEVICE=y
++CONFIG_SPI_FLASH_MACRONIX=y
++CONFIG_SPI_FLASH_SPANSION=y
++CONFIG_SPI_FLASH_STMICRO=y
++CONFIG_SPI_FLASH_WINBOND=y
++CONFIG_SPI_FLASH_ISSI=y
++CONFIG_PHY_GIGE=y
++CONFIG_MVNETA=y
++CONFIG_PCI=y
++CONFIG_DM_PCI=y
++CONFIG_PCI_AARDVARK=y
++CONFIG_MVEBU_COMPHY_SUPPORT=y
++CONFIG_PINCTRL=y
++CONFIG_PINCTRL_ARMADA_37XX=y
++CONFIG_DM_REGULATOR_FIXED=y
++CONFIG_DM_REGULATOR_GPIO=y
++# CONFIG_SPL_SERIAL_PRESENT is not set
++CONFIG_DEBUG_MVEBU_A3700_UART=y
++CONFIG_DEBUG_UART_BASE=0xd0012000
++CONFIG_DEBUG_UART_CLOCK=25804800
++CONFIG_DEBUG_UART_SHIFT=2
++CONFIG_DEBUG_UART_ANNOUNCE=y
++CONFIG_MVEBU_A3700_UART=y
++CONFIG_MVEBU_A3700_SPI=y
++CONFIG_USB=y
++CONFIG_DM_USB=y
++CONFIG_USB_XHCI_HCD=y
++CONFIG_USB_EHCI_HCD=y
++CONFIG_USB_STORAGE=y
++CONFIG_USB_HOST_ETHER=y
++CONFIG_USB_ETHER_ASIX=y
++CONFIG_USB_ETHER_MCS7830=y
++CONFIG_USB_ETHER_RTL8152=y
++CONFIG_USB_ETHER_SMSC95XX=y
++CONFIG_SHA1=y
++CONFIG_SHA256=y
+diff --git a/drivers/mtd/spi/spi_flash_ids.c b/drivers/mtd/spi/spi_flash_ids.c
+index 8468db4..6500f77 100644
+--- a/drivers/mtd/spi/spi_flash_ids.c
++++ b/drivers/mtd/spi/spi_flash_ids.c
+@@ -65,6 +65,7 @@ const struct spi_flash_info spi_flash_ids[] = {
+ #ifdef CONFIG_SPI_FLASH_GIGADEVICE	/* GIGADEVICE */
+ 	{"gd25q64b",	   INFO(0xc84017, 0x0, 64 * 1024,   128, SECT_4K) },
+ 	{"gd25lq32",	   INFO(0xc86016, 0x0, 64 * 1024,    64, SECT_4K) },
++	{"gd25lq64c",	   INFO(0xc86017, 0x0, 64 * 1024,   128, RD_FULL | WR_QPP | SECT_4K) },
+ #endif
+ #ifdef CONFIG_SPI_FLASH_ISSI		/* ISSI */
+ 	{"is25lq040b",	   INFO(0x9d4013, 0x0, 64 * 1024,    8, 0)  },
+diff --git a/include/configs/mvebu_armada-common.h b/include/configs/mvebu_armada-common.h
+index 84be257..2dc2ca6 100644
+--- a/include/configs/mvebu_armada-common.h
++++ b/include/configs/mvebu_armada-common.h
+@@ -34,19 +34,18 @@
+ #define CONFIG_ETHPRIME			"eth0"
+ #define CONFIG_ROOTPATH                 "/srv/nfs/" /* Default Dir for NFS */
+ #define CONFIG_ENV_OVERWRITE		/* ethaddr can be reprogrammed */
+-#define CONFIG_EXTRA_ENV_SETTINGS	"bootcmd=run get_images; " \
+-						"run set_bootargs; " \
+-						"booti $kernel_addr_r " \
+-						"$ramdisk_addr_r " \
+-						"$fdt_addr_r\0" \
+-					"extra_params=pci=pcie_bus_safe\0" \
+-					"kernel_addr_r=0x7000000\0"	\
+-					"initrd_addr=0xa00000\0"	\
++#define CONFIG_EXTRA_ENV_SETTINGS	"bootcmd=for target in ${boot_targets}; " \
++						"do run bootcmd_${target}; " \
++						"done\0" \
++					"kernel_addr=0x7000000\0"	\
++					"initrd_addr=0x1100000\0"	\
+ 					"initrd_size=0x2000000\0"	\
+-					"fdt_addr_r=0x6f00000\0"	\
+-					"loadaddr=0x6000000\0"		\
++					"fdt_addr=0x6000000\0"	\
++					"loadaddr=0x8000000\0"		\
+ 					"fdt_high=0xffffffffffffffff\0"	\
++					"scriptaddr=0x6d00000\0"	\
+ 					"hostname=marvell\0"		\
++					"initrd_image=uInitrd\0"	\
+ 					"ramdisk_addr_r=0x8000000\0"	\
+ 					"ramfs_name=-\0"		\
+ 					"fdt_name=fdt.dtb\0"		\
+@@ -56,25 +55,28 @@
+ 					"eth2addr=00:51:82:11:22:02\0"	\
+ 					"eth3addr=00:51:82:11:22:03\0"	\
+ 					"image_name=Image\0"		\
+-					"get_ramfs=if test \"${ramfs_name}\"" \
+-						" != \"-\"; then setenv " \
+-						"ramdisk_addr_r 0x8000000; " \
+-						"tftpboot $ramdisk_addr_r " \
+-						"$ramfs_name; else setenv " \
+-						"ramdisk_addr_r -;fi\0"	\
+-					"get_images=tftpboot $kernel_addr_r " \
+-						"$image_name; tftpboot " \
+-						"$fdt_addr_r $fdt_name; " \
+-						"run get_ramfs\0"	\
+ 					"console=" CONFIG_DEFAULT_CONSOLE "\0"\
+-					"root=root=/dev/nfs rw\0"	\
+-					"set_bootargs=setenv bootargs $console"\
+-						" $root ip=$ipaddr:$serverip:" \
+-						"$gatewayip:$netmask:$hostname"\
+-						":$netdev:none nfsroot="\
+-						"$serverip:$rootpath,tcp,v3 " \
+-						"$extra_params " \
+-						"$cpuidle"
++					"boot_targets=usb mmc0 sata\0"	\
++					"boot_prefixes=/ /boot/\0"	\
++					"bootcmd_mmc0=setenv devnum 0; " \
++						"setenv boot_interface mmc; " \
++						"run scan_dev_for_boot;\0"	\
++					"bootcmd_sata=setenv devnum 0; "	\
++						"scsi scan; "	\
++						"scsi dev 0; "	\
++						"setenv boot_interface scsi; "	\
++						"run scan_dev_for_boot;\0"	\
++					"bootcmd_usb=setenv devnum 0; " \
++						"usb start; " \
++						"setenv boot_interface usb; "	\
++						"run scan_dev_for_boot;\0"	\
++					"scan_dev_for_boot=for prefix in ${boot_prefixes}; "\
++						"do echo ${prefix}; "	\
++						"run boot_a_script; "	\
++						"done\0"	\
++					"boot_a_script=ext4load ${boot_interface} "	\
++						"${devnum}:1 ${scriptaddr} ${prefix}boot.scr; "	\
++						"source ${scriptaddr};\0"
+ /*
+  * For booting Linux, the board info and command line data
+  * have to be in the first 8 MB of memory, since this is
+@@ -139,7 +141,7 @@ defined(CONFIG_TARGET_MVEBU_ARMADA_37XX) && defined(CONFIG_MV88E6XXX_SWITCH)
+  */
+ #define CONFIG_ENV_OFFSET		(0x200000 - CONFIG_ENV_SIZE)
+ #else
+-#define CONFIG_ENV_OFFSET		(0x400000 - CONFIG_ENV_SIZE)
++#define CONFIG_ENV_OFFSET		(0x200000 - CONFIG_ENV_SIZE)
+ #endif
+ #endif
+ 
+-- 
+2.26.3
+

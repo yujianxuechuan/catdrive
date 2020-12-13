@@ -1,0 +1,40 @@
+From 94514593bfef8aaea81edacdd22c9df9b9f8cd2a Mon Sep 17 00:00:00 2001
+From: Register <458892+aieu@users.noreply.github.com>
+Date: Mon, 17 Sep 2001 00:00:00 +0800
+Subject: [PATCH] uboot: dtc fix build with gcc-10
+
+Signed-off-by: Register <458892+aieu@users.noreply.github.com>
+---
+ scripts/dtc/dtc-lexer.l             | 2 +-
+ scripts/dtc/dtc-lexer.lex.c_shipped | 2 +-
+ 2 files changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/scripts/dtc/dtc-lexer.l b/scripts/dtc/dtc-lexer.l
+index fd825eb..de3f875 100644
+--- a/scripts/dtc/dtc-lexer.l
++++ b/scripts/dtc/dtc-lexer.l
+@@ -38,7 +38,7 @@ LINECOMMENT	"//".*\n
+ #include "srcpos.h"
+ #include "dtc-parser.tab.h"
+ 
+-YYLTYPE yylloc;
++
+ extern bool treesource_error;
+ 
+ /* CAUTION: this will stop working if we ever use yyless() or yyunput() */
+diff --git a/scripts/dtc/dtc-lexer.lex.c_shipped b/scripts/dtc/dtc-lexer.lex.c_shipped
+index 011bb96..2ba11cd 100644
+--- a/scripts/dtc/dtc-lexer.lex.c_shipped
++++ b/scripts/dtc/dtc-lexer.lex.c_shipped
+@@ -631,7 +631,7 @@ char *yytext;
+ #include "srcpos.h"
+ #include "dtc-parser.tab.h"
+ 
+-YYLTYPE yylloc;
++
+ extern bool treesource_error;
+ 
+ /* CAUTION: this will stop working if we ever use yyless() or yyunput() */
+-- 
+2.26.3
+

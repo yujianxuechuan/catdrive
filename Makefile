@@ -1,107 +1,110 @@
-KERNEL_BSP := https://github.com/vgist/catdrive/releases/download
-RELEASE_TAG = Kernel-4.14-2020-12-13
-DTB := armada-3720-catdrive.dtb
+SHELL = /bin/bash
+CUR_DIR := $(shell pwd)
+OUTPUT_DIR := $(CUR_DIR)/output
 
-DTB_URL := $(KERNEL_BSP)/$(RELEASE_TAG)/$(DTB)
-KERNEL_URL := $(KERNEL_BSP)/$(RELEASE_TAG)/Image
-KMOD_URL := $(KERNEL_BSP)/$(RELEASE_TAG)/modules.tar.xz
+UBOOT_NM := u-boot-2018.03-armada-18.12
+UBOOT := u-boot-marvell-$(UBOOT_NM)
+UBOOT_URL := https://github.com/MarvellEmbeddedProcessors/u-boot-marvell/archive/refs/heads/$(UBOOT_NM).tar.gz
+UBOOT_CFG := catdrive.config
+DTB := armada-3720-catdrive
+BL33 := $(UBOOT)/u-boot.bin
 
-TARGETS := debian archlinux alpine ubuntu
+DDR_NM := mv_ddr-armada-18.12
+DDR := mv-ddr-marvell-$(DDR_NM)
+DDR_URL := https://github.com/MarvellEmbeddedProcessors/mv-ddr-marvell/archive/refs/heads/$(DDR_NM).tar.gz
 
-DL := dl
-DL_KERNEL := $(DL)/kernel/$(RELEASE_TAG)
-OUTPUT := output
+A3700_NM := A3700_utils-armada-18.12-fixed
+A3700 := A3700-utils-marvell-$(A3700_NM)
+A3700_URL := https://github.com/MarvellEmbeddedProcessors/A3700-utils-marvell/archive/refs/heads/$(A3700_NM).tar.gz
 
-CURL := curl -O -L
-download = ( mkdir -p $(1) && cd $(1) ; $(CURL) $(2) )
+ATF_NM := atf-v1.5-armada-18.12
+ATF := atf-marvell-$(ATF_NM)
+ATF_URL := https://github.com/MarvellEmbeddedProcessors/atf-marvell/archive/refs/heads/$(ATF_NM).tar.gz
 
-help:
-	@echo "Usage: make build_[system1]=y build_[system2]=y build"
-	@echo "available system: $(TARGETS)"
+TC_ARM := gcc-linaro-7.5.0-2019.12-x86_64_arm-linux-gnueabi
+TC_AARCH64 := gcc-linaro-7.5.0-2019.12-x86_64_aarch64-linux-gnu
+TC_ARM_URL := https://releases.linaro.org/components/toolchain/binaries/latest-7/arm-linux-gnueabi/$(TC_ARM).tar.xz
+TC_AARCH64_URL := https://releases.linaro.org/components/toolchain/binaries/latest-7/aarch64-linux-gnu/$(TC_AARCH64).tar.xz
 
-build: $(TARGETS)
+DEFCONFIG := $(CUR_DIR)/$(UBOOT)/configs/catdrive_defconfig
+MAKE_ARCH := export PATH=$$PATH:$(CUR_DIR)/$(TC_ARM)/bin:$(CUR_DIR)/$(TC_AARCH64)/bin; make CROSS_COMPILE=aarch64-linux-gnu- CROSS_CM3=arm-linux-gnueabi-
 
-clean: $(TARGETS:%=%_clean)
-	rm -f $(RESCUE_ROOTFS)
-
-dl_kernel: $(DL_KERNEL)/$(DTB) $(DL_KERNEL)/Image $(DL_KERNEL)/modules.tar.xz
-
-$(DL_KERNEL)/$(DTB):
-	$(call download,$(DL_KERNEL),$(DTB_URL))
-
-$(DL_KERNEL)/Image:
-	$(call download,$(DL_KERNEL),$(KERNEL_URL))
-
-$(DL_KERNEL)/modules.tar.xz:
-	$(call download,$(DL_KERNEL),$(KMOD_URL))
-
-ALPINE_BRANCH := v3.13
-ALPINE_VERSION := 3.13.5
-ALPINE_PKG := alpine-minirootfs-$(ALPINE_VERSION)-aarch64.tar.gz
-RESCUE_ROOTFS := tools/rescue/rescue-alpine-catdrive-$(ALPINE_VERSION)-aarch64.tar.xz
-ALPINE_URL_BASE := http://dl-cdn.alpinelinux.org/alpine/$(ALPINE_BRANCH)/releases/aarch64
-
-alpine_dl: dl_kernel $(DL)/$(ALPINE_PKG)
-
-$(DL)/$(ALPINE_PKG):
-	$(call download,$(DL),$(ALPINE_URL_BASE)/$(ALPINE_PKG))
-
-alpine_clean:
-
-$(RESCUE_ROOTFS):
-	@[ ! -f $(RESCUE_ROOTFS) ] && make rescue
-
-rescue: alpine_dl
-	sudo BUILD_RESCUE=y ./build-alpine.sh release $(DL)/$(ALPINE_PKG) $(DL_KERNEL) -
-
-ifeq ($(build_alpine),y)
-alpine: alpine_dl $(RESCUE_ROOTFS)
-	sudo ./build-alpine.sh release $(DL)/$(ALPINE_PKG) $(DL_KERNEL) $(RESCUE_ROOTFS)
-else
-alpine:
+dl_toolchain:
+ifeq (,$(wildcard $(CUR_DIR)/$(TC_ARM).tar.xz))
+	curl -O -L $(TC_ARM_URL)
+	tar xf $(TC_ARM).tar.xz
+else ifeq (,$(wildcard $(CUR_DIR)/$(TC_ARM)))
+	tar xf $(TC_ARM).tar.xz
+endif
+ifeq (,$(wildcard $(CUR_DIR)/$(TC_AARCH64).tar.xz))
+	curl -O -L $(TC_AARCH64_URL)
+	tar xf $(TC_AARCH64).tar.xz
+else ifeq (,$(wildcard $(CUR_DIR)/$(TC_AARCH64)))
+	tar xf $(TC_AARCH64).tar.xz
 endif
 
-
-ARCHLINUX_PKG := ArchLinuxARM-aarch64-latest.tar.gz
-ARCHLINUX_URL_BASE := http://os.archlinuxarm.org/os
-
-archlinux_dl: dl_kernel $(DL)/$(ARCHLINUX_PKG)
-
-$(DL)/$(ARCHLINUX_PKG):
-	$(call download,$(DL),$(ARCHLINUX_URL_BASE)/$(ARCHLINUX_PKG))
-
-archlinux_clean:
-	rm -f $(DL)/$(ARCHLINUX_PKG)
-
-ifeq ($(build_archlinux),y)
-archlinux: archlinux_dl $(RESCUE_ROOTFS)
-	sudo ./build-archlinux.sh release $(DL)/$(ARCHLINUX_PKG) $(DL_KERNEL) $(RESCUE_ROOTFS)
-else
-archlinux:
+dl_uboot:
+ifeq (,$(wildcard $(CUR_DIR)/$(UBOOT_NM).tar.gz))
+	curl -O -L $(UBOOT_URL)
+	tar xf $(UBOOT_NM).tar.gz
+else ifeq (,$(wildcard $(CUR_DIR)/$(UBOOT)))
+	tar xf $(UBOOT_NM).tar.gz
 endif
 
-UBUNTU_PKG := ubuntu-base-20.04.2-base-arm64.tar.gz
-UBUNTU_URL_BASE := http://cdimage.ubuntu.com/ubuntu-base/releases/focal/release
-
-ubuntu_dl: dl_kernel $(DL)/$(UBUNTU_PKG)
-
-$(DL)/$(UBUNTU_PKG):
-	$(call download,$(DL),$(UBUNTU_URL_BASE)/$(UBUNTU_PKG))
-
-ubuntu_clean:
-
-ifeq ($(build_ubuntu),y)
-ubuntu: ubuntu_dl $(RESCUE_ROOTFS)
-	sudo ./build-ubuntu.sh release $(DL)/$(UBUNTU_PKG) $(DL_KERNEL) $(RESCUE_ROOTFS)
-else
-ubuntu:
+dl_ddr:
+ifeq (,$(wildcard $(CUR_DIR)/$(DDR_NM).tar.gz))
+	curl -O -L $(DDR_URL)
+	tar xf $(DDR_NM).tar.gz
+else ifeq (,$(wildcard $(CUR_DIR)/$(DDR)))
+	tar xf $(DDR_NM).tar.gz
 endif
 
-ifeq ($(build_debian),y)
-debian: dl_kernel $(RESCUE_ROOTFS)
-	sudo ./build-debian.sh release - $(DL_KERNEL) $(RESCUE_ROOTFS)
-
-else
-debian:
+dl_atf:
+ifeq (,$(wildcard $(CUR_DIR)/$(ATF_NM).tar.gz))
+	curl -O -L $(ATF_URL)
+	tar xf $(ATF_NM).tar.gz
+else ifeq (,$(wildcard $(CUR_DIR)/$(ATF)))
+	tar xf $(ATF_NM).tar.gz
 endif
-debian_clean:
+
+dl_A3700:
+ifeq (,$(wildcard $(CUR_DIR)/$(A3700_NM).tar.gz))
+	curl -O -L $(A3700_URL)
+	tar xf $(A3700_NM).tar.gz
+else ifeq (,$(wildcard $(CUR_DIR)/$(A3700)))
+	tar xf $(A3700_NM).tar.gz
+endif
+
+all: atf
+	mkdir -p $(OUTPUT_DIR)
+	cp -f $(ATF)/build/a3700/release/uart-images.tgz $(OUTPUT_DIR)
+	cp -f $(ATF)/build/a3700/release/flash-image.bin $(OUTPUT_DIR)
+
+patch: dl_A3700 dl_atf dl_ddr dl_uboot dl_toolchain
+ifeq (,$(wildcard $(DEFCONFIG)))
+	find $(CUR_DIR)/patches -type f -print | sort | xargs -n 1 patch -d $(UBOOT) -p1 -i
+endif
+
+uboot: patch
+	$(MAKE_ARCH) -C $(UBOOT) catdrive_defconfig
+	$(MAKE_ARCH) -C $(UBOOT) DEVICE_TREE=$(DTB)
+
+atf: uboot
+	$(MAKE_ARCH) -C $(ATF) \
+		MV_DDR_PATH=$(CUR_DIR)/$(DDR) \
+		WTP=$(CUR_DIR)/$(A3700) \
+		BL33=$(CUR_DIR)/$(BL33) \
+		CLOCKSPRESET=CPU_1000_DDR_800 DDR_TOPOLOGY=0 \
+		BOOTDEV=SPINOR PARTNUM=0 PLAT=a3700 DEBUG=0 \
+		USE_COHERENT_MEM=0 LOG_LEVEL=20 SECURE=0 \
+		all fip
+
+clean:
+ifneq (,$(wildcard $(DEFCONFIG)))
+	find $(CUR_DIR)/patches -type f -print | sort -r | xargs -n 1 patch -d $(UBOOT) -p1 -R -i
+endif
+	$(MAKE_ARCH) -C $(UBOOT) clean
+	$(MAKE_ARCH) -C $(ATF) distclean
+	rm -rf $(OUTPUT_DIR)
+
+# vim:ft=make

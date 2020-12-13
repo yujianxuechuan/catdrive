@@ -1,3 +1,10 @@
-dl
-tmp
-output
+!.gitkeep
+.DS_Store
+.initialized
+.restored
+.Spotlight-v100
+gcc-linaro-*
+u-boot-*
+mv-ddr-*
+atf-*
+A3700-*
