@@ -13,7 +13,7 @@ add_svc(){
 }
 
 apk update --no-progress && \
-	apk add --no-progress alpine-base haveged parted \
+	apk add --no-progress alpine-base parted \
 	e2fsprogs-extra coreutils uboot-tools pv tzdata
 
 echo "root:admin" | chpasswd
@@ -22,7 +22,7 @@ add_svc "sysinit" "sysfs procfs devfs mdev"
 
 add_svc "boot" "urandom swclock sysctl modules hostname bootmisc syslog"
 
-add_svc "default" "crond haveged ntpd"
+add_svc "default" "crond ntpd"
 
 add_svc "shutdown" "killprocs mount-ro savecache"
 

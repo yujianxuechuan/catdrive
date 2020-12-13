@@ -18,6 +18,12 @@ EOF
 
 chmod +x ./usr/sbin/policy-rc.d
 
+cat <<EOF >> ./etc/apt/apt.conf
+APT::Install-Recommends "0" ;
+APT::Install-Suggests "0" ;
+
+EOF
+
 apt $apt_arg update && apt $apt_arg upgrade
 
 if [ "$BUILD_MINIMAL" = "y" ]; then
@@ -27,14 +33,15 @@ else
 	yes | unminimize
 fi
 
-apt $apt_arg install net-tools openssh-server dialog cpufrequtils haveged parted u-boot-tools
+apt $apt_arg install net-tools openssh-server dialog cpufrequtils parted u-boot-tools zram-tools
 apt -f $apt_arg install
-apt $apt_arg purge irqbalance ureadahead unattended-upgrades && apt $apt_arg autoremove
+apt $apt_arg purge irqbalance ureadahead unattended-upgrades && apt $apt_arg autoremove --purge
 apt clean
 
 systemctl enable systemd-networkd
 systemctl disable ondemand
 systemctl set-default multi-user.target
+
 
 cat <<EOF > ./etc/default/cpufrequtils
 ENABLE=true

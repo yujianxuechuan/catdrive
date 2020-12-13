@@ -10,6 +10,7 @@ cat <<EOF > ./usr/sbin/policy-rc.d
 exit 101
 
 EOF
+
 chmod +x ./usr/sbin/policy-rc.d
 
 /debootstrap/debootstrap --second-stage
@@ -20,19 +21,33 @@ mount -t sysfs none /sys
 mount -t devtmpfs none /dev
 mount -t devpts none /dev/pts
 
+cat <<EOF >> ./etc/apt/apt.conf
+APT::Install-Recommends "0" ;
+APT::Install-Suggests "0" ;
+
+EOF
+
 apt $apt_arg update && \
-	apt $apt_arg install aptitude openssh-server haveged net-tools network-manager parted u-boot-tools
+	apt $apt_arg install aptitude locales openssh-server net-tools parted u-boot-tools zram-tools
 apt clean
 
-aptitude search ~pstandard ~prequired ~pimportant -F "%p" |xargs apt $apt_arg install
+aptitude search ~prequired ~pimportant -F "%p" |xargs apt $apt_arg install
 apt clean
 
-apt $apt_arg purge exim4-base exim4-config && apt $apt_arg autoremove
+apt $apt_arg purge aptitude && apt $apt_arg autoremove --purge
 apt clean
 
 systemctl set-default multi-user.target
-systemctl disable networking
-systemctl enable network-manager
+
+cat <<EOF > ./etc/network/interfaces
+source /etc/network/interfaces.d/*
+auto lo
+iface lo inet loopback
+
+allow-hotplug eth0
+iface eth0 inet dhcp
+
+EOF
 
 cat <<EOF > ./etc/udev/rules.d/99-hdparm.rules
 ACTION=="add", SUBSYSTEM=="block", KERNEL=="sd*",ENV{ID_BUS}=="ata", ENV{DEVTYPE}=="disk", RUN+="/sbin/hdparm -S 120 \$env{DEVNAME}"

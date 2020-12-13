@@ -156,11 +156,9 @@ func_release() {
 		mkdir -p $output/${os}
 		mv -f $tmpdir/${img_name}.img $output/$os
 
-		if [ -n "$TRAVIS_TAG" ]; then
-			mkdir -p $output/release
-			xz -T0 -v -f $output/$os/${img_name}.img
-			mv $output/$os/${img_name}.img.xz $output/release
-		fi
+		mkdir -p $output/release
+		xz -T0 -v -f $output/$os/${img_name}.img
+		mv $output/$os/${img_name}.img.xz $output/release
 	fi
 
 	rm -rf $tmpdir

@@ -4,12 +4,13 @@
 # pacman-key --init
 # pacman-key --populate archlinuxarm
 
+
 [ "$EUID" != "0" ] && echo "please run as root" && exit 1
 
 os="archlinux"
 rootsize=1400
 origin="latest"
-target="catdrive-$(date +%Y-%m-%d)"
+target="catdrive"
 
 tmpdir="tmp"
 output="output"
@@ -21,12 +22,7 @@ DTB=armada-3720-catdrive.dtb
 
 chroot_prepare() {
 	rm -rf $rootfs_mount_point/etc/resolv.conf
-	if [ -z "$TRAVIS" ]; then
-		echo 'Server = https://mirrors.163.com/archlinuxarm/$arch/$repo' > $rootfs_mount_point/etc/pacman.d/mirrorlist
-		echo "nameserver 119.29.29.29" > $rootfs_mount_point/etc/resolv.conf
-	else
-		echo "nameserver 8.8.8.8" > $rootfs_mount_point/etc/resolv.conf
-	fi
+	echo "nameserver 8.8.8.8" > $rootfs_mount_point/etc/resolv.conf
 }
 
 ext_init_param() {
@@ -35,9 +31,7 @@ ext_init_param() {
 
 chroot_post() {
 	ln -sf /run/systemd/resolve/resolv.conf $rootfs_mount_point/etc/resolv.conf
-	if [ -n "$TRAVIS" ]; then
-		echo 'Server = https://mirrors.163.com/archlinuxarm/$arch/$repo' > $rootfs_mount_point/etc/pacman.d/mirrorlist
-	fi
+	echo 'Server = https://opentuna.cn/archlinuxarm//$arch/$repo' > $rootfs_mount_point/etc/pacman.d/mirrorlist
 }
 
 add_services() {
