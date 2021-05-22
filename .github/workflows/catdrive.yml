@@ -1,11 +1,11 @@
-name: catdrive
+name: catdrive bsp
 
 on:
   repository_dispatch:
     types: catdrive
   push:
     tags:
-      - CatDrive-**
+      - CatDrive-bsp-[0-9]+-[0-9]+-[0-9]+
 
 jobs:
   build:
@@ -24,7 +24,7 @@ jobs:
     - name: Checkout
       uses: actions/checkout@v2
       with:
-        ref: master
+        ref: bsp
 
     - name: Build CatDrive
       run: |

@@ -1,5 +1,6 @@
 #### Build CatDrive
 
-- archlinux
-- debian
-- ubuntu-base
+- alpine 3.14
+- archlinux latest
+- debian buster
+- ubuntu-base Focal
