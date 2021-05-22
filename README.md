@@ -1,6 +1,5 @@
-#### Build CatDrive
+#### Build CatDrive with kernel 5.10.y
 
-- alpine 3.14
-- archlinux latest
-- debian buster
-- ubuntu-base Focal
+- archlinux
+- debian
+- ubuntu-base

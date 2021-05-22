@@ -1,5 +1,5 @@
 KERNEL_BSP := https://github.com/vgist/catdrive/releases/download
-RELEASE_TAG = Kernel-4.14.76-armada-18.12
+RELEASE_TAG = Kernel-5.10-2021-05-20
 DTB := armada-3720-catdrive.dtb
 
 DTB_URL := $(KERNEL_BSP)/$(RELEASE_TAG)/$(DTB)
@@ -35,8 +35,8 @@ $(DL_KERNEL)/Image:
 $(DL_KERNEL)/modules.tar.xz:
 	$(call download,$(DL_KERNEL),$(KMOD_URL))
 
-ALPINE_BRANCH := v3.14
-ALPINE_VERSION := 3.14.2
+ALPINE_BRANCH := v3.13
+ALPINE_VERSION := 3.13.5
 ALPINE_PKG := alpine-minirootfs-$(ALPINE_VERSION)-aarch64.tar.gz
 RESCUE_ROOTFS := tools/rescue/rescue-alpine-catdrive-$(ALPINE_VERSION)-aarch64.tar.xz
 ALPINE_URL_BASE := http://dl-cdn.alpinelinux.org/alpine/$(ALPINE_BRANCH)/releases/aarch64
@@ -80,7 +80,7 @@ else
 archlinux:
 endif
 
-UBUNTU_PKG := ubuntu-base-20.04.3-base-arm64.tar.gz
+UBUNTU_PKG := ubuntu-base-20.04.2-base-arm64.tar.gz
 UBUNTU_URL_BASE := http://cdimage.ubuntu.com/ubuntu-base/releases/focal/release
 
 ubuntu_dl: dl_kernel $(DL)/$(UBUNTU_PKG)
