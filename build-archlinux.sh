@@ -8,7 +8,7 @@
 [ "$EUID" != "0" ] && echo "please run as root" && exit 1
 
 os="archlinux"
-rootsize=1400
+rootsize=1600
 origin="latest"
 target="catdrive"
 

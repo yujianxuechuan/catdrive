@@ -61,7 +61,7 @@ ln -sf /usr/share/zoneinfo/Asia/Shanghai ./etc/localtime
 sed -i '/^#PermitRootLogin/cPermitRootLogin yes' ./etc/ssh/sshd_config
 sed -i '/^#NTP/cNTP=time1.aliyun.com 2001:470:0:50::2' ./etc/systemd/timesyncd.conf
 echo "ttyMV0" >> ./etc/securetty
-echo "/dev/root / ext4 defaults,noatime,nodiratime,errors=remount-ro 0 1" >> ./etc/fstab
+echo "/dev/root / ext4 defaults,noatime,nodiratime,commit=600,errors=remount-ro 0 1" >> ./etc/fstab
 echo "vm.zone_reclaim_mode=1" > ./etc/sysctl.d/99-vm-reclaim.conf
 echo "/dev/mtd1 0x0000 0x10000 0x10000" > ./etc/fw_env.config
 echo "catdrive" > ./etc/hostname
