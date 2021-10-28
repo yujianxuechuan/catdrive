@@ -1,9 +1,9 @@
-name: kernel-4.14
+name: kernel-5.10
 
 on:
   push:
     tags:
-      - Kernel-4**
+      - Kernel-5**
 
 jobs:
   build:
@@ -22,7 +22,7 @@ jobs:
     - name: Checkout
       uses: actions/checkout@v2
       with:
-        ref: kernel-4.14
+        ref: kernel-5.10
 
     - name: Compile kernel
       run: |

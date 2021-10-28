@@ -4,7 +4,7 @@
 .restored
 .Spotlight-v100
 dl
-gcc-linaro-*
+gcc-*
 linux-*
 stage
 tmp

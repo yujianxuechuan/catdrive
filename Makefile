@@ -2,18 +2,16 @@ CUR_DIR := $(shell pwd)
 STAGE_DIR := $(CUR_DIR)/stage
 OUTPUT_DIR := $(CUR_DIR)/output
 
-TC := gcc-linaro-7.5.0-2019.12-x86_64_aarch64-linux-gnu
-TCURL := https://releases.linaro.org/components/toolchain/binaries/latest-7/aarch64-linux-gnu/$(TC).tar.xz
+TC := gcc-arm-10.3-2021.07-x86_64-aarch64-none-linux-gnu
+TCURL := https://developer.arm.com/-/media/Files/downloads/gnu-a/10.3-2021.07/binrel/$(TC).tar.xz
 
-KTAGS := linux-4.14.76-armada-18.12
-KURL := https://github.com/MarvellEmbeddedProcessors/linux-marvell/archive/refs/heads/$(KTAGS).tar.gz
-
-KDIR := linux-marvell-$(KTAGS)
+KDIR := linux-5.10.76
 KCFG := catdrive_defconfig
+KDTS := $(KDIR)/arch/arm64/boot/dts/marvell/armada-3720-catdrive.dts
+KURL := https://cdn.kernel.org/pub/linux/kernel/v5.x/$(KDIR).tar.xz
 KVER = $(shell make -s kernel_version)
-KDTS := $(CUR_DIR)/$(KDIR)/arch/arm64/boot/dts/marvell/armada-3720-catdrive.dts
 
-MAKE_ARCH := export PATH=$$PATH:$(CUR_DIR)/$(TC)/bin; make -C $(KDIR) CROSS_COMPILE=aarch64-linux-gnu- ARCH=arm64
+MAKE_ARCH := export PATH=$$PATH:$(CUR_DIR)/$(TC)/bin; make -C $(KDIR) CROSS_COMPILE=aarch64-none-linux-gnu- ARCH=arm64
 J=$(shell grep ^processor /proc/cpuinfo | wc -l)
 
 all: kernel modules
@@ -32,12 +30,12 @@ else ifeq (,$(wildcard $(TC)))
 endif
 
 dl_kernel:
-ifeq (,$(wildcard $(KTAGS).tar.gz))
+ifeq (,$(wildcard $(KDIR).tar.xz))
 	curl -O -L $(KURL)
-	tar xf $(KTAGS).tar.gz
+	tar xf $(KDIR).tar.xz
 	rm -rf $(KDIR)/.git
 else ifeq (,$(wildcard $(KDIR)))
-	tar xf $(KTAGS).tar.gz
+	tar xf $(KDIR).tar.xz
 	rm -rf $(KDIR)/.git
 endif
 
