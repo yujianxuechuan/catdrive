@@ -3,7 +3,7 @@ name: uboot
 on:
   push:
     tags:
-      - Uboot-**
+      - Uboot**
 
 jobs:
   build:
