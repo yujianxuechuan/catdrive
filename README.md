@@ -1,8 +1,8 @@
-### build catdrive kernel
+### Build kernel for CatDrive
 
-linux-5.10.y LTS kernel for marvell armada-3720-catdrive
+linux-5.15.y LTS kernel for marvell armada-3720-catdrive
 
-#### toolchain
+#### toolchain:
 
     gcc-arm-10.3-2021.07-x86_64-aarch64-none-linux-gnu
 
@@ -10,20 +10,15 @@ fetch latest gnu toolchain from
 
 <https://developer.arm.com/tools-and-software/open-source-software/developer-tools/gnu-toolchain/gnu-a/downloads>
 
-#### linux-marvell
+#### kernel:
 
     https://www.kernel.org
-    branch linux-5.10.y
+    branch: linux-5.15.y
 
-#### build
+#### build:
 
     make patch
     make all
-
-#### known issues
-
-- ethernet led
-- aw2013 led
 
 Porting the patch from <https://github.com/hanwckf/linux-marvell>
 
